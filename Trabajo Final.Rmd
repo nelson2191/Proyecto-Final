@@ -1,0 +1,222 @@
+---
+title: "Análisis de criminalidad de Inglaterra"
+author: "Nelson Rivas"
+date: "11/25/2019"
+output: 
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+    theme: sandstone
+    highlight: kate
+    
+---
+
+
+##   Business performance analysis
+
+---
+
+#  Introducción
+
+En el presente trabajo se abarcarán algunas de las funciones más básicas de R. La aplicación de las funciones está delimitada por los datos que se analizarán. Es por esto que la selección de los datos tendrá como objetivo posibilitar el uso de la mayor cantidad de funciones, prioritariamente "webscraping", representación de información geográfica y la obtención de información por medio de APIS. 
+
+---
+
+#  Expresiones regulares
+
+A continuación se estudiarán las expresiones regulares de las siguientes páginas:
+
+
+*   <span style="color:blue">[**Documentacion técnica R Studio**](<https://www.r-studio.com/es/Unformat_Help/regularexpressions.html>),<span style="color:blue">
+
+En este sitio web se explica de forma muy sencilla qué es una expresión regular. En resumen diferencia las expresiones regulares de las cadenas de caracteres exactas en que, la expresion regular utiliza tanto caracteres literales como metacaracteres para realizar una búsqueda de patrones de texto. El carácter literal coincide con la ocurrencia del caracter, mientras que el metacarácter va servir de delimitador de la búsqueda. 
+
+
+Para concluir el autor hace una tabla de algunas expresiones regulares, que en mi criterio es muy básica. 
+
+
+*  <span style="color:blue">[**Expresiones regulares en R**](<http://www.diegocalvo.es/expresiones-regulares-en-r/>),<span style="color:blue">
+
+En esta página no se brinda una definición de lo que son las expresiones regulares, sin embargo, realiza una lista de funciones de R que se ejecutan utilizando expresiones regulares. El autor expone algunas funciones de manipulación de texto de R que utilizan expresiones regulares, como por ejemplo: 
+
+    + Paste
+    + Strsplit
+    + Chartr
+    + Gsub
+    
+Además, incluye otras funciones de búsqueda, tales como:
+
+    + Grep
+    + Regexpr
+    
+El autor finaliza con una tabla muy completa en la que en tres columnas expone la sintaxis de la expresión, hace una descripción de la expresión regular y brinda un ejemplo (si aplica). Abarca expresiones regulares compredidos únicamente por metacaracteres (^, |, •, $), y otras muy comunes comprendidas por caracteres literales y metacaracteres (a+, a{2,4}?, [A-Z]...).
+
+---
+
+#  Markdown
+
+En este apartado sobre markdown es conveniente mencionar que existe mucha información en la web acerca del uso de markdown y los textos se encuentran tanto en inglés como en español, por lo que ante una duda existen muchas fuentes de consulta, sin embargo, la información suele ser para un usuario principiante. 
+
+*   <span style="color:blue">[**Markdown-Javier Cristobal**](<http://markdown.es>),<span style="color:blue">
+
+En el sitio web previamente mencionado el autor explica de una forma muy sencilla qué es, para qué se utiliza y las razones por las cuales se debe utilizar markdown. Luego, se estudia la sintaxis donde explica los elementos básicos de este lenguaje, los ejemplifica y da una vista previa del resultado en markdown. Además, menciona los que en su criterio, son los mejores editores de markdown y brinda una descripción básica de cada uno. Por último, decribe Multimarkdown como la alternativa cuando se requieren más funciones y mencionas cuatro funciones de esta herramienta.
+
+
+*    <span style="color:blue">[**Markdown guide**](<http://www.markdownguide.org/extended-syntax/>),<span style="color:blue">
+
+Esta fue la página web más completa de markdown que encontré. El autor abarca aspectos que van desde qué es markdown, por qué se recomienda usarlo, cómo tranforma los textos, hasta su uso para escribir un libro eléctronico, presentación o correos electrónicos. 
+
+Además, incluye la sintaxis básica y extendida de esta herramienta, menciona una lista de aplicaciones y componentes que soportan markdown, y sugiere un libro de consulta __Markdown Guide Book.__
+
+Para finalizar, la web contiene muchos enlaces donde se obtiene un manual de uso de las aplicaciones con las que markdown es compatible. 
+
+
+---
+
+#  Análisis de datos
+
+  A continuación se presentarán los datos de criminalidad de Inglaterra y Wales por el mes de setiembre. 
+
+```{r setup, include=FALSE}
+library(knitr)
+library(rvest)
+url_constituencies <- "https://ukcrimestats.com/Constituencies/"
+tmp_const <- read_html(url_constituencies)
+tmp_const <- html_nodes(tmp_const, "table")
+length(tmp_const)
+sapply(tmp_const, function(x) dim(html_table(x, fill = TRUE)))
+crime_const <- html_table(tmp_const[[4]],fill= T)
+crime_const <- crime_const[2:20]
+colnames(crime_const) <- c("constituency","country","population","land_area","asb", "burglary","robbery",
+                           "vehicle","violent","shoplifting","cda","other_theft","drugs","bike_theft",
+                           "theft_from_person","weapons","order","other", "total")
+sapply(crime_const, class) 
+crime_const1 <- crime_const
+dec2<- function(x){
+  x<- gsub(",","",x)
+}
+crime_const1[3:19] <- lapply(crime_const1[3:19],dec2)
+crime_const1[3:19] <- lapply(crime_const1[3:19], as.numeric,na.rm = T)
+```
+
+```{r echo=FALSE}
+kable(crime_const1[1:20,])
+```
+
+De la tabla anterior vamos a comprobar si la siguiente hipótesis es verdaddera:"Existe alguna relacion entre la cantidad de habitantes y el total de crímenes". Es decir, ¿La cantidad de crímenes de una ciudad es proporcional a la cantidad de habitantes que lo habitan? Si esto es cierto, las ciudades con un mayor número de habitates deberían presentar un mayor número de crímenes, lo contrario, se vería reflejado en las ciudades con menos habitantes.
+
+Para ello, vamos a filtar las tres ciudades con menor y mayor cantidad de habitantes y estudiar la relación Cantidad de población-Crímenes por medio de una gráfica.
+
+
+```{r include=FALSE}
+mi.crime_const1 <- crime_const1[order(crime_const1$population),]
+head(mi.crime_const1,3L)  #Blackpool South, Kingston upon Hull West and Hessle, Great Grimsby
+tail(mi.crime_const1,3L)  #West Ham, East Ham, Poplar and Limehouse England.
+mi_crime_pop <- crime_const1
+mi_crime_const1 <- crime_const1[c(10,26,34,60,61,74),]
+
+```
+
+```{r echo=FALSE}
+kable(mi_crime_const1)
+```
+
+
+```{r include= FALSE }
+library(ggplot2)
+library(plotly)
+p <- ggplot(mi_crime_const1,aes(x=population, y=total, col=constituency))+geom_jitter()
+p + labs(title = "UK crimes, October 2019",subtitle = "Relacion entre cantidad de poblacion y criminalidad",
+         caption = "Data from https://ukcrimestats.com") 
+```
+
+```{r echo=FALSE}
+p <- ggplotly()
+p
+```
+
+Como podemos observar en la gráfica, la tendencia sí es que a un mayor nivel de población se dé una mayor tasa de criminalidad, sin embargo, esta no es la regla. Las tres ciudades con menor cantidad de población presentan una menor cantidad de crímenes y lo contrario sucede con las ciudades de West Ham y Poplar and Limehouse. Pero cuando nos detenemos a observar East Ham, se infiere que a pesar de la gran cantidad de población presenta una cantidad baja de crímenes. La causa de esto se puede explicar a que la cantidad de población no es el único factor que incide en la cantidad de crímenes, tales como: Ingresos de los habitantes de la ciudad, nivel de estudios, entre otros.
+
+
+```{r include=FALSE}
+library(reshape2)
+library(plyr)
+crime_largo<- melt(crime_const1, id.vars = c("constituency", "country","population","land_area"))
+kable(crime_largo[1:6,])
+```
+
+  A continuación vamos a estudiar el total de registros de cada crimen:
+
+```{r include=FALSE}
+res <- ddply(crime_largo, .(variable), summarize, total = sum(value))
+res
+mi.res <- res[order(res$total),]
+```
+
+```{r, echo=FALSE}
+kable(mi.res)
+```
+
+De la tabla anterior se concluye que los 5 crímenes con más registros son: violent, asb, other theft, order, vehicle. 
+
+A continuación vamos a localizar en el mapa la ciudad con mayor cantidad de registros de criminalidad: West Ham
+
+```{r include=FALSE}
+library(ggmap)
+register_google(key = "AIzaSyAsI3CdHy60j-sUP5F1KFtYHl-c94sNWmg")
+coordenadas <- geocode('west ham, new ham, london, uk', 
+                       source = "google")
+coordenadas
+map_west_ham <- get_map(location = as.numeric(coordenadas),
+                       color = "color",
+                       maptype = "roadmap",
+                       scale = 2,
+                       zoom = 16)
+
+g <- ggmap(map_west_ham,extent = "normal") + geom_point(aes(x = lon, y = lat),
+                                data = coordenadas, colour = 'red',
+                                size = 15)
+
+```
+
+```{r echo=FALSE}
+g
+```
+
+Por medio de la API de la policia del Reino Unido se pueden recuperar los crímenes registrados en un radio de una milla de un punto seleccionado. En la siguiente tabla se muestran los crímenes registrados como violent-crime en West Ham. 
+
+
+```{r include=FALSE}
+library(httr)
+library(jsonlite)
+url_crimes <- "https://data.police.uk/api/crimes-street/violent-crime?"
+request <- GET(url = url_crimes, 
+               query = list(
+                 lat = 51.5,
+                 lng = 0.0125,
+                 date = "2019-10")
+)
+request$status_code
+response <- content(request, as = "text", encoding = "UTF-8")
+west_ham <- fromJSON(response)
+dim(west_ham)
+```
+
+```{r echo=FALSE}
+violent_crime <- west_ham[1:25,c(1,2,9)]
+kable(violent_crime)
+```
+
+Como podemos ver del crímen violent_crime tiene 134 registros dentro de un rango de una milla del punto latitud= 51.5 y longitud= 0.0125
+
+---
+
+#  Conclusión
+
+Al realizar este trabajo fui testigo de la ardua tarea de filtar las grandes cantidades de información que se obtienen de internet, tanto de datos de algún tema en específico como de los recursos de markdown. La escogencia de la información se basó en su utilidad para el uso de APIS, webscraping y mapas de google, cuyo uso, fue uno de los objetivos principales de este trabajo y no el análisis de los mismos.
+ 
+Para concluir, con este proyecto se hizo un repaso de algunas funciones básicas de R y markdown. Lejos de ser una presentación de las funciones principales, la ejecución de este proyecto sirvió para investigar la gran canbtidad de funciones que permiten ambas herramientas.
+
+
